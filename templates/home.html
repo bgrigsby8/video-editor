@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+{% extends "base.html" %}
+{% block title %}Video Editor{% endblock %}
+{% block content %}
+<html lang="en">
+<head>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+</head>
+<style>
+.bg-grey {
+	background-color: #f084cf;
+}
+
+.container-fluid {
+	padding: 60px 50px;
+	text-align: center;
+}
+
+.jumbotron {
+	background-color: #f084cf;
+	color: #ffffff;
+	padding: 100px 25px;
+	text-align: center;
+}
+</style>
+<body>
+	<div class="jumbotron">
+  		<h1>Nicole's Video Editor</h1>
+	</div>
+	<div class="container-fluid">
+		<p>Select video:</p>
+		<button type="button" class="btn">Cut video</button>
+	</div>
+</body>
+</html>
+{% endblock %}

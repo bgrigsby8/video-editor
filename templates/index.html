@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>VHS Animation</title>
+	<style>
+	    body {
+	        position: relative;
+	        height: 100vh;
+	        margin: 0;
+	        display: flex;
+	        flex-direction: column;
+	        justify-content: center;
+	        align-items: center;
+	    }
+	    #play-button {
+	        position: absolute;
+	        top: 36%;
+	        left: 27%;
+	        width: 38rem;
+	        height: 22rem;
+	        opacity: 0;
+	        z-index: 3;
+	        cursor: pointer;
+	    }
+	    #animation-video, #first-frame {
+	        position: absolute;
+	        top: 0;
+	        left: 0;
+	        width: 100%;
+	        height: 100%;
+	        object-fit: cover;
+	    }
+	    #animation-video {
+	        display: none;
+	    }
+	    #file-input {
+	    	display: none;
+	    }
+	    #file-label {
+	    	cursor: pointer;
+	    	font-family: 'Dancing Script', cursive;
+	    	font-size: 2em;
+	    	color: black;
+	    }
+	    form {
+	        position: relative;
+	        z-index: 2;
+	        padding: 20px;
+	        border-radius: 10px;
+	    }
+	</style>
+	<script>
+		function sendFileName() {
+			var fileInput = document.getElementById('file-input');
+			var file = fileInput.files[0];
+			if (file) {
+				var fileName = file.name;
+
+				fetch('/receive_filename', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+					},
+					body: JSON.stringify({ filename: fileName })
+				})
+				.then(response => response.json())
+				.then(data => console.log(data))
+				.then(error => console.error('Error: ', error))
+			}
+
+            var video = document.getElementById('animation-video');
+            var image = document.getElementById('first-frame');
+            var label = document.getElementById('file-label');
+
+            video.style.display = 'block';
+            image.style.display = 'none';
+            label.style.display = 'none';
+            video.play();
+		}
+	</script>
+</head>
+<body>
+	<h1>Select a video file</h1>
+	<form action="/" method="POST" id="video_file_form" enctype="multipart/form-data">
+		<label for="file-input" id="file-label">Click here to upload video</label>
+		<input type="file" id="file-input" name="video_file" accept="video/mp4 video/avi video/mov" onchange="sendFileName()">
+	</form>
+	<img id="first-frame" src="{{ url_for('static', filename='first_frame.jpg') }}" alt="First frame of the animation">
+	<video id="animation-video" src="{{ url_for('static', filename='vhs_animation.mp4') }}" preload="auto"></video>
+</body>
+</html>

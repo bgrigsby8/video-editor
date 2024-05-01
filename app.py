@@ -8,8 +8,7 @@ from flask import (
 	render_template, 
 	request,
 )
-import moviepy.editor as mpy
-import os
+from flaskwebgui import FlaskUI
 from video_editor import VideoEditor
 from werkzeug.utils import secure_filename
 
@@ -23,16 +22,26 @@ def index():
 
 @app.route('/receive_filename', methods=['POST'])
 def receive_filename():
-	data = request.get_json()
-	filename = data.get('filename')
-	video_editor = VideoEditor("C:/Users/Brad's PC/projects/video-editor/test_video.mp4")
-	video_editor.process_video()
+	try:
+		data = request.get_json()
+		filename = data.get('filename')
+		video_editor = VideoEditor("C:/Users/Brad's PC/projects/video-editor/test_video.mp4")
+		video_editor.process_video()
 
-	return jsonify({'message': f"Received filename: {filename} and edited video."})
+		return jsonify({'message': f"Received filename: {filename} and edited video."})
+	except Exception as e:
+		return jsonify({'error': str(e)}), 500
 
-@app.route('/downloads/<filename>')
-def download_file(filename):
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+# @app.route('/downloads/<filename>')
+# def download_file(filename):
+#     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 if __name__ == "__main__":
-	app.run(host='127.0.0.1', port=5000, debug=False)
+	# app.run(host='127.0.0.1', port=5000, debug=True)
+	FlaskUI(
+		app=app,
+		server="flask",
+		width=900,
+		height=600,
+		browser_path=r"C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
+	).run()

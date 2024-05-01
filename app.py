@@ -7,14 +7,25 @@ from flask import (
 	jsonify, 
 	render_template, 
 	request,
+	send_from_directory,
 )
 from flaskwebgui import FlaskUI
+import os
 from video_editor import VideoEditor
 from werkzeug.utils import secure_filename
 
 # Create the Flask instance
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = 'uploads/'
+app.config['UPLOAD_FOLDER'] = r"C:\\Users\\Brad's PC\\projects\\video-editor\\tmp"
+
+def ensure_upload_folder_exists():
+    try:
+        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+        print(f"Upload folder '{app.config['UPLOAD_FOLDER']}' is ready.")
+    except Exception as e:
+        print(f"Error creating upload directory: {e}")
+
+ensure_upload_folder_exists()
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -22,19 +33,29 @@ def index():
 
 @app.route('/receive_filename', methods=['POST'])
 def receive_filename():
-	try:
-		data = request.get_json()
-		filename = data.get('filename')
-		video_editor = VideoEditor("C:/Users/Brad's PC/projects/video-editor/test_video.mp4")
-		video_editor.process_video()
+    try:
+        # Check if the post request has the file part
+        if 'video_file' not in request.files:
+            return jsonify({'error': 'No file part'}), 400
 
-		return jsonify({'message': f"Received filename: {filename} and edited video."})
-	except Exception as e:
-		return jsonify({'error': str(e)}), 500
+        file = request.files['video_file']
+        if file.filename == '':
+            return jsonify({'error': 'No selected file'}), 400
 
-# @app.route('/downloads/<filename>')
-# def download_file(filename):
-#     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+        if file:
+            # Save the uploaded file
+            filename = secure_filename(file.filename)
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(file_path)
+
+            # Process the video
+            video_editor = VideoEditor(file_path)
+            video_editor.process_video()
+
+            # Optionally, you can also serve the processed video to download or preview
+            return jsonify({'message': f"Received and processed video: {filename}."})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == "__main__":
 	# app.run(host='127.0.0.1', port=5000, debug=True)

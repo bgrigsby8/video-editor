@@ -30,8 +30,11 @@
 	        height: 100%;
 	        object-fit: cover;
 	    }
-	    #animation-video {
+	    #animation-insert-video {
 	        display: none;
+	    }
+	    #animation-done-video {
+	    	display: none;
 	    }
 	    #file-input {
 	    	display: none;
@@ -54,47 +57,34 @@
 			var fileInput = document.getElementById('file-input');
 			var file = fileInput.files[0];
 			if (file) {
-				var fileName = file.name;
+				var formData = new FormData();
+				formData.append('video_file', file);
+
+				var insertVideo = document.getElementById('animation-insert-video');
+				var image = document.getElementById('first-frame');
+				var label = document.getElementById('file-label');
+
+				insertVideo.style.display = 'block';
+				image.style.display = 'none';
+				label.style.display = 'none';
+				insertVideo.play()
 
 				fetch('/receive_filename', {
 					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-					},
-					body: JSON.stringify({ filename: fileName })
+					body: formData
 				})
 				.then(response => response.json())
-				.then(data => console.log(data))
-				.then(error => console.error('Error: ', error))
+				.then(data => {
+					console.log(data)
+					var doneVideo = document.getElementById('animation-done-video');
+
+					insertVideo.style.display = 'none';
+					doneVideo.style.display = 'block';
+					doneVideo.play()
+				})
+				.catch(error => console.error('Error:', error));
 			}
-
-            var video = document.getElementById('animation-video');
-            var image = document.getElementById('first-frame');
-            var label = document.getElementById('file-label');
-
-            video.style.display = 'block';
-            image.style.display = 'none';
-            label.style.display = 'none';
-            video.play();
 		}
-
-		async function getRequest(url = '') {
-		    const response = await fetch(url, {
-		        method: 'GET',
-		        cache: 'no-cache'
-		    })
-		    return response.json()
-		}
-		document.addEventListener('DOMContentLoaded', function () {
-		    let url = document.location
-		    let route = "/flaskwebgui-keep-server-alive"
-		    let interval_request = 3 * 1000 //sec
-		    function keep_alive_server() {
-		        getRequest(url + route)
-		            .then(data => console.log(data))
-		    }
-		    setInterval(keep_alive_server, interval_request)()
-		})
 	</script>
 </head>
 <body>
@@ -104,6 +94,7 @@
 		<input type="file" id="file-input" name="video_file" accept="video/mp4 video/avi video/mov" onchange="sendFileName()">
 	</form>
 	<img id="first-frame" src="{{ url_for('static', filename='first_frame.jpg') }}" alt="First frame of the animation">
-	<video id="animation-video" src="{{ url_for('static', filename='vhs_animation.mp4') }}" preload="auto"></video>
+	<video id="animation-insert-video" src="{{ url_for('static', filename='vhs_insert_animation.mp4') }}" preload="auto"></video>
+	<video id="animation-done-video" src=" {{ url_for('static', filename='vhs_done_animation.mp4') }}" preload="auto"></video>
 </body>
 </html>

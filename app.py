@@ -51,6 +51,7 @@ def receive_filename():
             # Process the video
             video_editor = VideoEditor(file_path)
             video_editor.process_video()
+            print("Completed video editing")
 
             # Optionally, you can also serve the processed video to download or preview
             return jsonify({'message': f"Received and processed video: {filename}."})

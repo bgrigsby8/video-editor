@@ -2,99 +2,314 @@
 <html lang="en">
 <head>
     <title>VHS Animation</title>
-	<style>
-	    body {
-	        position: relative;
-	        height: 100vh;
-	        margin: 0;
-	        display: flex;
-	        flex-direction: column;
-	        justify-content: center;
-	        align-items: center;
-	    }
-	    #play-button {
-	        position: absolute;
-	        top: 36%;
-	        left: 27%;
-	        width: 38rem;
-	        height: 22rem;
-	        opacity: 0;
-	        z-index: 3;
-	        cursor: pointer;
-	    }
-	    #animation-video, #first-frame {
-	        position: absolute;
-	        top: 0;
-	        left: 0;
-	        width: 100%;
-	        height: 100%;
-	        object-fit: cover;
-	    }
-	    #animation-insert-video {
-	        display: none;
-	    }
-	    #animation-done-video {
-	    	display: none;
-	    }
-	    #file-input {
-	    	display: none;
-	    }
-	    #file-label {
-	    	cursor: pointer;
-	    	font-family: 'Dancing Script', cursive;
-	    	font-size: 2em;
-	    	color: black;
-	    }
-	    form {
-	        position: relative;
-	        z-index: 2;
-	        padding: 20px;
-	        border-radius: 10px;
-	    }
-	</style>
-	<script>
-		function sendFileName() {
-			var fileInput = document.getElementById('file-input');
-			var file = fileInput.files[0];
-			if (file) {
-				var formData = new FormData();
-				formData.append('video_file', file);
+    <style>
+        body {
+            position: relative;
+            height: 100vh;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-family: Arial, sans-serif;
+        }
+        #play-button {
+            position: absolute;
+            top: 36%;
+            left: 27%;
+            width: 38rem;
+            height: 22rem;
+            opacity: 0;
+            z-index: 3;
+            cursor: pointer;
+        }
+        #animation-video, #first-frame {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        #animation-insert-video, #animation-done-video {
+            display: none;
+        }
+        #file-input {
+            display: none;
+        }
+        #file-label {
+            cursor: pointer;
+            font-family: 'Dancing Script', cursive;
+            font-size: 2em;
+            color: black;
+        }
+        form {
+            position: relative;
+            z-index: 2;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        .settings-icon {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 1;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 400px;
+        }
+        .close {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            position: relative;
+            left: 90%;
+        }
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input[type="number"],
+        .form-group input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .form-group .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+        .form-group .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .form-group .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .form-group .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        .form-group input:checked + .slider {
+            background-color: #2196F3;
+        }
+        .form-group input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            display: none;
+        }
+        .loading-spinner {
+            border: 16px solid #f3f3f3;
+            border-top: 16px solid #3498db;
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            animation: spin 2s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .loading-text {
+            margin-top: 20px;
+            color: white;
+            font-size: 1em;
+            text-align: center;
+        }
+    </style>
+    <script>
+        function sendFileName() {
+            var fileInput = document.getElementById('file-input');
+            var file = fileInput.files[0];
+            if (file) {
+                var formData = new FormData();
+                formData.append('video_file', file);
 
-				var insertVideo = document.getElementById('animation-insert-video');
-				var image = document.getElementById('first-frame');
-				var label = document.getElementById('file-label');
+                // Obtain original filepath
+                var originalFilePath = file.webkitRelativePath || file.name;
+                formData.append('original_file_path', originalFilePath);
 
-				insertVideo.style.display = 'block';
-				image.style.display = 'none';
-				label.style.display = 'none';
-				insertVideo.play()
+                showLoading("Uploading video...");
+                var insertVideo = document.getElementById('animation-insert-video');
+                var image = document.getElementById('first-frame');
+                var label = document.getElementById('file-label');
 
-				fetch('/receive_filename', {
-					method: 'POST',
-					body: formData
-				})
-				.then(response => response.json())
-				.then(data => {
-					console.log(data)
-					var doneVideo = document.getElementById('animation-done-video');
+                insertVideo.style.display = 'block';
+                image.style.display = 'none';
+                label.style.display = 'none';
+                insertVideo.play()
 
-					insertVideo.style.display = 'none';
-					doneVideo.style.display = 'block';
-					doneVideo.play()
-				})
-				.catch(error => console.error('Error:', error));
-			}
-		}
-	</script>
+                fetch('/receive_filename', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data);
+                    showLoading("Processing video...");
+                    var doneVideo = document.getElementById('animation-done-video');
+
+                    insertVideo.style.display = 'none';
+                    doneVideo.style.display = 'block';
+                    doneVideo.play();
+                    hideLoading();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    hideLoading();
+                });
+            }
+        }
+
+        function openModal() {
+            document.getElementById("settingsModal").style.display = "block";
+        }
+
+        function closeModal() {
+            document.getElementById("settingsModal").style.display = "none";
+        }
+
+        function saveSettings() {
+            var form = document.getElementById('settingsForm');
+            var formData = new FormData(form);
+
+            showLoading("Saving settings...");
+            fetch('/save_settings', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data);
+                closeModal();
+                hideLoading();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                hideLoading();
+            })
+        }
+
+        function showLoading(message) {
+            var loadingOverlay = document.getElementById('loadingOverlay');
+            var loadingText = document.getElementById('loadingText');
+            loadingText.textContent = message;
+            loadingOverlay.style.display = 'flex';
+        }
+
+        function hideLoading() {
+            var loadingOverlay = document.getElementById('loadingOverlay');
+            loadingOverlay.style.display = 'none';
+        }
+
+        function startLogStream() {
+            var eventSource = new EventSource('/log_stream');
+            eventSource.onmessage = function(event) {
+                var loadingText = document.getElementById('loadingText');
+                loadingText.textContent = event.data;
+            };
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            startLogStream();
+        });
+    </script>
 </head>
 <body>
-	<h1>Select a video file</h1>
-	<form action="/" method="POST" id="video_file_form" enctype="multipart/form-data">
-		<label for="file-input" id="file-label">Click here to upload video</label>
-		<input type="file" id="file-input" name="video_file" accept="video/mp4 video/avi video/mov" onchange="sendFileName()">
-	</form>
-	<img id="first-frame" src="{{ url_for('static', filename='first_frame.jpg') }}" alt="First frame of the animation">
-	<video id="animation-insert-video" src="{{ url_for('static', filename='vhs_insert_animation.mp4') }}" preload="auto"></video>
-	<video id="animation-done-video" src=" {{ url_for('static', filename='vhs_done_animation.mp4') }}" preload="auto"></video>
+    <div class="settings-icon" onclick="openModal()">⚙️</div>
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <form id="settingsForm">
+                <div class="form-group">
+                    <label for="volume-threshold">Minimum Volume Threshold:</label>
+                    <input type="number" id="volume-threshold" name="volume_threshold" step="0.01" placeholder="0.1">
+                </div>
+                <div class="form-group">
+                    <label for="silence-jacket">Silence Jacket:</label>
+                    <input type="number" id="silence-jacket" name="silence_jacket" step="0.1" placeholder="0.25">
+                </div>
+                <div class="form-group">
+                    <label for="dynamic-threshold">Dynamic Volume Threshold:</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="dynamic-threshold" name="dynamic_threshold">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <button type="button" onclick="saveSettings()">Save</button>
+            </form>
+        </div>
+    </div>
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div id="loadingText" class="loading-text"></div>
+    </div>
+    <h1>Select a video file</h1>
+    <form action="/" method="POST" id="video_file_form" enctype="multipart/form-data">
+        <label for="file-input" id="file-label">Click here to upload video!</label>
+        <input type="file" id="file-input" name="video_file" accept="video/mp4, video/avi, video/mov" onchange="sendFileName()">
+    </form>
+    <img id="first-frame" src="{{ url_for('static', filename='first_frame.jpg') }}" alt="First frame of the animation">
+    <video id="animation-insert-video" src="{{ url_for('static', filename='vhs_insert_animation.mp4') }}" preload="auto"></video>
+    <video id="animation-done-video" src="{{ url_for('static', filename='vhs_done_animation.mp4') }}" preload="auto"></video>
 </body>
 </html>

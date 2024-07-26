@@ -3,28 +3,29 @@
 Flask server for video-editor
 """
 from flask import (
-	Flask, 
-	jsonify, 
-	render_template, 
-	request,
-	send_from_directory,
+    Flask, 
+    jsonify, 
+    render_template, 
+    request,
+    Response,
+    stream_with_context,
 )
 from flaskwebgui import FlaskUI
 import os
 from pathlib import Path
 import sys
+import logging
 from video_editor import VideoEditor
 from werkzeug.utils import secure_filename
+import threading
+import queue
 
 def get_browser_path():
     if sys.platform.startswith('win'):
-        # Path for Chrome on Windows
         return r"C:\Program Files\Google\Chrome\Application\chrome.exe"
     elif sys.platform.startswith('darwin'):
-        # Path for Chrome on macOS
         return "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
     elif sys.platform.startswith('linux'):
-        # Path for Chrome on Linux
         return "/usr/bin/google-chrome-stable"
     else:
         raise EnvironmentError("Unsupported operating system")
@@ -47,14 +48,27 @@ app.config['UPLOAD_FOLDER'] = str(upload_folder)
 
 ensure_upload_folder_exists()
 
+# Settings variables
+volume_threshold = 0.1
+silence_jacket = 0.25
+dynamic_silence_threshold = False
+
+# Queue to store log messages
+log_queue = queue.Queue()
+
+class QueueHandler(logging.Handler):
+    def emit(self, record):
+        log_entry = self.format(record)
+        log_queue.put(log_entry)
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
-	return render_template('index.html')
+    return render_template('index.html')
 
 @app.route('/receive_filename', methods=['POST'])
 def receive_filename():
+    global volume_threshold, silence_jacket, dynamic_silence_threshold
     try:
-        # Check if the post request has the file part
         if 'video_file' not in request.files:
             return jsonify({'error': 'No file part'}), 400
 
@@ -62,23 +76,53 @@ def receive_filename():
         if file.filename == '':
             return jsonify({'error': 'No selected file'}), 400
 
+        original_file_path = request.form.get('original_file_path')
+        logging.info(f"Original file path set to: {original_file_path}")
+        if not original_file_path:
+            return jsonify({'error': 'No original file path provided'}), 400
+
         if file:
-            # Save the uploaded file
             filename = secure_filename(file.filename)
             file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(file_path)
 
-            # Process the video
-            video_editor = VideoEditor(file_path)
+            logging.info("Received video file, starting processing...")
+            video_editor = VideoEditor(file_path, dynamic_silence_threshold, silence_jacket, volume_threshold, original_file_path)
             video_editor.process_video()
-            print("Completed video editing")
+            logging.info("Completed video editing")
 
-            # Optionally, you can also serve the processed video to download or preview
             return jsonify({'message': f"Received and processed video: {filename}."})
+    except Exception as e:
+        logging.error(f"An error occurred: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/save_settings', methods=['POST'])
+def save_settings():
+    global volume_threshold, silence_jacket, dynamic_silence_threshold
+    try:
+        volume_threshold = float(request.form.get('volume_threshold', 0.11))
+        silence_jacket = float(request.form.get('silence_jacket', 0.25))
+        dynamic_silence_threshold = request.form.get('dynamic_threshold') == 'off'
+
+        return jsonify({'message': 'Settings updated successfully'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/log_stream')
+def log_stream():
+    def generate():
+        while True:
+            log_entry = log_queue.get()
+            yield f'data: {log_entry}\n\n'
+    
+    return Response(stream_with_context(generate()), mimetype='text/event-stream')
+
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+    queue_handler = QueueHandler()
+    queue_handler.setFormatter(logging.Formatter('%(message)s'))
+    logging.getLogger().addHandler(queue_handler)
+    
     browser_path = get_browser_path()
     FlaskUI(
         app=app,

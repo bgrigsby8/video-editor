@@ -194,7 +194,7 @@ class VideoEditor:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Edit video around silences found')
-    parser.add_argument('-f', '--file', type=str, required=True help='Path to the raw video file.')
+    parser.add_argument('-f', '--file', type=str, required=True, help='Path to the raw video file.')
     parser.add_argument('-c', '--concatenate', type=bool, default=False, help='Concatenate videos into one clip.')
 
     args = parser.parse_args()

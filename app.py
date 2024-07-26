@@ -11,12 +11,23 @@ from flask import (
 )
 from flaskwebgui import FlaskUI
 import os
+from pathlib import Path
+import sys
 from video_editor import VideoEditor
 from werkzeug.utils import secure_filename
 
-# Create the Flask instance
-app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = r"C:\\Users\\Brad's PC\\projects\\video-editor\\tmp"
+def get_browser_path():
+    if sys.platform.startswith('win'):
+        # Path for Chrome on Windows
+        return r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+    elif sys.platform.startswith('darwin'):
+        # Path for Chrome on macOS
+        return "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+    elif sys.platform.startswith('linux'):
+        # Path for Chrome on Linux
+        return "/usr/bin/google-chrome-stable"
+    else:
+        raise EnvironmentError("Unsupported operating system")
 
 def ensure_upload_folder_exists():
     try:
@@ -24,6 +35,15 @@ def ensure_upload_folder_exists():
         print(f"Upload folder '{app.config['UPLOAD_FOLDER']}' is ready.")
     except Exception as e:
         print(f"Error creating upload directory: {e}")
+
+# Create the Flask instance
+app = Flask(__name__)
+
+current_directory = Path(__file__).parent
+upload_folder = current_directory / 'tmp'
+upload_folder.mkdir(parents=True, exist_ok=True)
+
+app.config['UPLOAD_FOLDER'] = str(upload_folder)
 
 ensure_upload_folder_exists()
 
@@ -59,11 +79,11 @@ def receive_filename():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == "__main__":
-	# app.run(host='127.0.0.1', port=5000, debug=True)
-	FlaskUI(
-		app=app,
-		server="flask",
-		width=900,
-		height=600,
-		browser_path=r"C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
-	).run()
+    browser_path = get_browser_path()
+    FlaskUI(
+        app=app,
+        server="flask",
+        width=900,
+        height=600,
+        browser_path=browser_path
+    ).run()

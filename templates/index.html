@@ -184,10 +184,6 @@
                 var formData = new FormData();
                 formData.append('video_file', file);
 
-                // Obtain original filepath
-                var originalFilePath = file.webkitRelativePath || file.name;
-                formData.append('original_file_path', originalFilePath);
-
                 showLoading("Uploading video...");
                 var insertVideo = document.getElementById('animation-insert-video');
                 var image = document.getElementById('first-frame');
@@ -231,6 +227,11 @@
         function saveSettings() {
             var form = document.getElementById('settingsForm');
             var formData = new FormData(form);
+            
+            // Logging form data
+            for (var pair of formData.entries()) {
+                console.log(pair[0]+ ': ' + pair[1]);
+            }
 
             showLoading("Saving settings...");
             fetch('/save_settings', {
@@ -294,6 +295,10 @@
                         <input type="checkbox" id="dynamic-threshold" name="dynamic_threshold">
                         <span class="slider"></span>
                     </label>
+                </div>
+                <div class="form-group">
+                    <label for="output-directory">Output Directory:</label>
+                    <input type="text" id="output-directory" name="output_directory" placeholder="~/VideoEditor/edited_videos">
                 </div>
                 <button type="button" onclick="saveSettings()">Save</button>
             </form>

@@ -20,6 +20,12 @@ from werkzeug.utils import secure_filename
 import threading
 import queue
 
+logging.basicConfig(
+    filename='app.log',
+    level=logging.DEBUG,
+    format='%(asctime)s %(levelname)s:%(message)s'
+)
+
 def get_browser_path():
     if sys.platform.startswith('win'):
         return r"C:\Program Files\Google\Chrome\Application\chrome.exe"
@@ -30,28 +36,30 @@ def get_browser_path():
     else:
         raise EnvironmentError("Unsupported operating system")
 
-def ensure_upload_folder_exists():
+def ensure_upload_folder_exists(path):
     try:
-        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-        print(f"Upload folder '{app.config['UPLOAD_FOLDER']}' is ready.")
+        os.makedirs(path, exist_ok=True)
+        print(f"Upload folder '{path}' is ready.")
     except Exception as e:
         print(f"Error creating upload directory: {e}")
 
 # Create the Flask instance
 app = Flask(__name__)
 
-current_directory = Path(__file__).parent
-upload_folder = current_directory / 'tmp'
+# Set upload folder to a directory in the user's home directory
+home_directory = Path(os.path.expanduser('~'))
+upload_folder = home_directory / 'VideoEditor' / 'tmp'
 upload_folder.mkdir(parents=True, exist_ok=True)
 
 app.config['UPLOAD_FOLDER'] = str(upload_folder)
 
-ensure_upload_folder_exists()
+ensure_upload_folder_exists(app.config['UPLOAD_FOLDER'])
 
 # Settings variables
 volume_threshold = 0.1
 silence_jacket = 0.25
 dynamic_silence_threshold = False
+output_directory = str(upload_folder)  # Default output directory
 
 # Queue to store log messages
 log_queue = queue.Queue()
@@ -67,7 +75,7 @@ def index():
 
 @app.route('/receive_filename', methods=['POST'])
 def receive_filename():
-    global volume_threshold, silence_jacket, dynamic_silence_threshold
+    global volume_threshold, silence_jacket, dynamic_silence_threshold, output_directory
     try:
         if 'video_file' not in request.files:
             return jsonify({'error': 'No file part'}), 400
@@ -76,18 +84,14 @@ def receive_filename():
         if file.filename == '':
             return jsonify({'error': 'No selected file'}), 400
 
-        original_file_path = request.form.get('original_file_path')
-        logging.info(f"Original file path set to: {original_file_path}")
-        if not original_file_path:
-            return jsonify({'error': 'No original file path provided'}), 400
-
         if file:
             filename = secure_filename(file.filename)
             file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(file_path)
 
-            logging.info("Received video file, starting processing...")
-            video_editor = VideoEditor(file_path, dynamic_silence_threshold, silence_jacket, volume_threshold, original_file_path)
+            expanded_output_directory = os.path.expanduser(output_directory)
+            video_editor = VideoEditor(file_path, dynamic_silence_threshold, silence_jacket, volume_threshold, expanded_output_directory)
+            print(f"AFTER OUTPUT DIRECTORY: {expanded_output_directory}")
             video_editor.process_video()
             logging.info("Completed video editing")
 
@@ -98,11 +102,14 @@ def receive_filename():
 
 @app.route('/save_settings', methods=['POST'])
 def save_settings():
-    global volume_threshold, silence_jacket, dynamic_silence_threshold
+    global volume_threshold, silence_jacket, dynamic_silence_threshold, output_directory
     try:
-        volume_threshold = float(request.form.get('volume_threshold', 0.11))
-        silence_jacket = float(request.form.get('silence_jacket', 0.25))
-        dynamic_silence_threshold = request.form.get('dynamic_threshold') == 'off'
+        volume_threshold = float(request.form.get('volume_threshold', 0.1) or 0.1)
+        silence_jacket = float(request.form.get('silence_jacket', 0.25) or 0.25)
+        dynamic_silence_threshold = request.form.get('dynamic_threshold') == 'on'
+        output_directory = request.form.get('output_directory', '~/VideoEditor/edited_videos') or '~/VideoEditor/edited_videos'
+        output_directory = os.path.expanduser(output_directory)
+        print(f"OUTPUT DIRECTORY: {output_directory}")
 
         return jsonify({'message': 'Settings updated successfully'})
     except Exception as e:
@@ -123,6 +130,7 @@ if __name__ == "__main__":
     queue_handler.setFormatter(logging.Formatter('%(message)s'))
     logging.getLogger().addHandler(queue_handler)
     
+    logging.info("Starting the Flask application")
     browser_path = get_browser_path()
     FlaskUI(
         app=app,

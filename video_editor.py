@@ -21,8 +21,8 @@ def _audio_to_db(audio_clip):
     """Takes in an audio clip and returns a numpy array
     of audio values in dB."""
     audio_samples = list(audio_clip.iter_frames())
-    audio_array = numpy.array(audio_samples)
-    audio_db = 20 * numpy.log10(numpy.abs(audio_array))
+    audio_array = np.array(audio_samples)
+    audio_db = 20 * np.log10(np.abs(audio_array))
 
     return audio_db
 
@@ -34,7 +34,7 @@ def _check_output_directory(directory):
 
 
 class VideoEditor:
-    def __init__(self, video_file, dynamic_silence_threshold=True, silence_jacket=0.25, volume_threshold=0.1, original_file_path=''):
+    def __init__(self, video_file, dynamic_silence_threshold=True, silence_jacket=0.25, volume_threshold=0.1, output_directory=''):
         self.edited_video = None
         self.sub_clips = []
         self.speaking_intervals = []
@@ -44,12 +44,12 @@ class VideoEditor:
         self.window_size = 0.1
 
         # Variables gather from user
-        self.dynamic_silence_threshold = dynamic_silence_threshold # Default: True
-        self.ease_in = silence_jacket # Default: 0.25
-        self.volume_threshold = volume_threshold # Default: 0.01
+        self.dynamic_silence_threshold = dynamic_silence_threshold  # Default: True
+        self.ease_in = silence_jacket  # Default: 0.25
+        self.volume_threshold = volume_threshold  # Default: 0.01
 
         # Determine the output directory for subclips
-        self.output_directory = os.path.join(os.path.dirname(original_file_path), 'edited_subclips')
+        self.output_directory = os.path.join(os.path.expanduser(output_directory), 'edited_subclips')
         logging.debug(f"Output directory set to: {self.output_directory}")
         _check_output_directory(self.output_directory)
 
@@ -130,10 +130,6 @@ class VideoEditor:
         self.sub_clips = [clip for clip in self.sub_clips if clip.duration > 0]
         if len(self.sub_clips) != len(self.speaking_intervals):
             logging.warning("Some sub clips had zero duration and were removed.")
-
-        # Test 2: using ffmpeg directly
-        # from moviepy.video.io.ffmpeg_tools import ffmpeg_extract_subclip
-        # self.sub_clips = [ffmpeg_extract_subclip(inputfile=self.video_file, start_time=start_time, end_time=end_time, outputfile="temp-file.mp4")
 
     def write_sub_clips(self):
         logging.info("Writing subclips...")
